@@ -10,10 +10,14 @@ from typing import List
 
 app = FastAPI()
 
+class ImageBase64(BaseModel):
+    encoded_image: str
+
 class ImageValidationResponse(BaseModel):
     message: str
     class_name: str
     confidence_score: float
+    is_valid: bool
 
 def load_opencv_model():
     model_file = "models/res10_300x300_ssd_iter_140000_fp16.caffemodel"
@@ -75,7 +79,7 @@ async def validate_image(file: UploadFile = File(...)):
         frame, face_locations = image, process_image(net, image)
         class_name, confidence_score = classify_face(keras_model, class_names, frame)
         
-        message = "Human Face not Found"
+        is_valid, message = False, "Human Face not Found"
         if "human" in class_name.lower():
             if face_locations:
                 valid_faces = []
@@ -83,27 +87,28 @@ async def validate_image(file: UploadFile = File(...)):
                     face_image = frame[top:bottom, left:right]
                     valid_faces.append((top, right, bottom, left))
                 if len(valid_faces) == 0:
-                    message = "Human Face not Found"
+                    is_valid, message = False, "Human Face not Found"
                 elif len(valid_faces) > 1:
-                    message = "Multiple Faces Detected"
+                    is_valid, message = False, "Multiple Faces Detected"
                 else:
-                    message = "Single Human Face Detected"
+                    is_valid, message = True, "Single Human Face Detected"
             else:
-                message = "Human Face not Found"
+                is_valid, message = False, "Human Face not Found"
 
         return ImageValidationResponse(
             message=message,
             class_name=class_name,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
+            is_valid=is_valid
         )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/validate_image_base64", response_model=ImageValidationResponse)
-async def validate_image_base64(encoded_image: str):
+async def validate_image_base64(encoded_image: ImageBase64):
     try:
-        image_data = base64.b64decode(encoded_image)
+        image_data = base64.b64decode(encoded_image.encoded_image)
         image = cv2.imdecode(np.frombuffer(image_data, np.uint8), cv2.IMREAD_COLOR)
 
         if image is None:
@@ -117,7 +122,7 @@ async def validate_image_base64(encoded_image: str):
         frame, face_locations = image, process_image(net, image)
         class_name, confidence_score = classify_face(keras_model, class_names, frame)
         
-        message = "Human Face not Found"
+        is_valid, message = False, "Human Face not Found"
         if "human" in class_name.lower():
             if face_locations:
                 valid_faces = []
@@ -125,19 +130,21 @@ async def validate_image_base64(encoded_image: str):
                     face_image = frame[top:bottom, left:right]
                     valid_faces.append((top, right, bottom, left))
                 if len(valid_faces) == 0:
-                    message = "Human Face not Found"
+                    is_valid, message = False, "Human Face not Found"
                 elif len(valid_faces) > 1:
-                    message = "Multiple Faces Detected"
+                    is_valid, message = False, "Multiple Faces Detected"
                 else:
-                    message = "Single Human Face Detected"
+                    is_valid, message = True, "Single Human Face Detected"
             else:
-                message = "Human Face not Found"
+                is_valid, message = False, "Human Face not Found"
 
         return ImageValidationResponse(
             message=message,
             class_name=class_name,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
+            is_valid=is_valid
         )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
