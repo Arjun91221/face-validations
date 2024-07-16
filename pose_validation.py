@@ -135,15 +135,15 @@ class PoseClassifier:
         pose, confidence = self.classify_pose(image)
 
         if body_type == "no_person":
-            return "No person detected"
+            return False, "No person detected"
         elif body_type == "half_body" and pose == "Sitting":
-            return "Sitting pose"
+            return False, "Sitting pose"
         elif body_type == "half_body" and pose == "Standing":
-            return "Half body image detected! Please choose a full body image"
+            return False, "Half body image detected! Please choose a full body image"
         elif body_type == "full_body" and pose == "Sitting":
-            return "Sitting pose"
+            return False, "Sitting pose"
         elif body_type == "full_body" and pose == "Standing":
-            return "Standing pose"
+            return True, "Standing pose"
     
     def infer_batch(self, images: Union[List[Union[str, np.ndarray]], str]) -> List[str]:
         """
@@ -172,8 +172,8 @@ class PoseClassifier:
     
 def check_pose(image):
     classifier = PoseClassifier(f"{current_directory}/models/keras_model_v2.h5", "labels.txt")
-    result = classifier.infer(image)
-    return result
+    is_valid, message = classifier.infer(image)
+    return is_valid, message
 
 
 async def fetch_image_from_url(url: str) -> io.BytesIO:
@@ -233,11 +233,11 @@ async def pose_detection_endpoint(base64_image: Base64Image):
         with open(image_path, "wb") as f:
             f.write(image_io.getvalue())
 
-        detected_pose = check_pose(image_path)
+        is_valid, message = check_pose(image_path)
 
         os.remove(image_path)
 
-        return detected_pose
+        return is_valid, message
     
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid base64 string: {e}")
