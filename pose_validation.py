@@ -137,11 +137,11 @@ class PoseClassifier:
         if body_type == "no_person":
             return False, "No person detected"
         elif body_type == "half_body" and pose == "Sitting":
-            return False, "Sitting pose"
+            return False, "Invalid pose. Please, Upload a full standing body pose model"
         elif body_type == "half_body" and pose == "Standing":
             return False, "Half body image detected! Please choose a full body image"
         elif body_type == "full_body" and pose == "Sitting":
-            return False, "Sitting pose"
+            return True, "Sitting pose"
         elif body_type == "full_body" and pose == "Standing":
             return True, "Standing pose"
     
